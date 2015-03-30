@@ -166,6 +166,9 @@ void GCS_MAVLINK::handle_log_send(DataFlash_Class &dataflash)
     // assume USB speeds in SITL for the purposes of log download
     num_sends = 40;
 #endif
+    
+    // ACS wants logs fast (we only ever download logs on a serial line)
+    num_sends = 60;
 
     for (uint8_t i=0; i<num_sends; i++) {
         if (_log_sending) {
