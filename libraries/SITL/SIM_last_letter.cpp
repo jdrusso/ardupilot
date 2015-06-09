@@ -76,9 +76,6 @@ void last_letter::start_last_letter(const char *home_str)
 
         std::string loc = "location:=" + lat_s + ", " + lon_s + ", " + alt_s;
 
-        printf("location string is | %s |", loc.c_str());
-
-
         int ret = execlp("roslaunch",
                          "roslaunch",
                          "last_letter",
