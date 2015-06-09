@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string>
 
 extern const AP_HAL::HAL& hal;
 
@@ -43,13 +44,13 @@ last_letter::last_letter(const char *home_str, const char *frame_str) :
     sock.reuseaddress();
     sock.set_blocking(false);
 
-    start_last_letter();
+    start_last_letter(home_str);
 }
 
 /*
   start last_letter child
  */
-void last_letter::start_last_letter(void)
+void last_letter::start_last_letter(const char *home_str)
 {
     pid_t child_pid = fork();
     if (child_pid == 0) {
@@ -60,11 +61,30 @@ void last_letter::start_last_letter(void)
             close(i);
         }
 
-        int ret = execlp("roslaunch", 
-                         "roslaunch", 
+        char *saveptr=NULL;
+        char *s = strdup(home_str);
+        std::string lat_s(strtok_r(s, ",", &saveptr));
+        std::string lon_s(strtok_r(NULL, ",", &saveptr));
+        std::string alt_s(strtok_r(NULL, ",", &saveptr));
+
+        //Append .0 to the end of the lat/lon/alt strings if they don't
+        //already have a decimal place so that they're properly formatted
+        //to be read by roslaunch.
+        lat_s += ( lat_s.find('.') != std::string::npos ) ? "" : ".0";
+        lon_s += ( lon_s.find('.') != std::string::npos ) ? "" : ".0";
+        alt_s += ( alt_s.find('.') != std::string::npos ) ? "" : ".0";
+
+        std::string loc = "location:=" + lat_s + ", " + lon_s + ", " + alt_s;
+
+        printf("location string is | %s |", loc.c_str());
+
+
+        int ret = execlp("roslaunch",
+                         "roslaunch",
                          "last_letter",
                          "launcher.launch",
                          "ArduPlane:=true",
+                         loc.c_str(),
                          NULL);
         if (ret != 0) {
             perror("roslaunch");
