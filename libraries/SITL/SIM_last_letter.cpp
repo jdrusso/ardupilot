@@ -74,7 +74,7 @@ void last_letter::start_last_letter(const char *home_str)
         lon_s += ( lon_s.find('.') != std::string::npos ) ? "" : ".0";
         alt_s += ( alt_s.find('.') != std::string::npos ) ? "" : ".0";
 
-        std::string loc = "location:=" + lat_s + ", " + lon_s + ", " + alt_s;
+        std::string loc = "home:=[" + lat_s + "," + lon_s + "," + alt_s + "]";
 
         int ret = execlp("roslaunch",
                          "roslaunch",
