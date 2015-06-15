@@ -40,7 +40,7 @@ public:
     }
 
 private:
-    static const uint16_t fdm_port = 9002;
+    uint16_t fdm_port;
     bool initialised;
 
     /*
