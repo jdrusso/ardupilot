@@ -40,6 +40,8 @@ public:
     }
 
 private:
+
+    bool initialized;
     static const uint16_t fdm_port = 9002;
 
     /*
@@ -66,7 +68,7 @@ private:
 
     void recv_fdm(const struct sitl_input &input);
     void send_servos(const struct sitl_input &input);
-    void start_last_letter(const char *home_str);
+    bool start_last_letter(void);
 
     uint64_t last_timestamp_us;
     SocketAPM sock;

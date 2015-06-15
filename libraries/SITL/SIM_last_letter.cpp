@@ -34,7 +34,8 @@ extern const AP_HAL::HAL& hal;
 last_letter::last_letter(const char *home_str, const char *frame_str) :
     Aircraft(home_str, frame_str),
     last_timestamp_us(0),
-    sock(true)
+    sock(true),
+    initialized(false)
 {
     // try to bind to a specific port so that if we restart ArduPilot
     // last_letter keeps sending us packets. Not strictly necessary but
@@ -44,13 +45,13 @@ last_letter::last_letter(const char *home_str, const char *frame_str) :
     sock.reuseaddress();
     sock.set_blocking(false);
 
-    start_last_letter(home_str);
+
 }
 
 /*
   start last_letter child
  */
-void last_letter::start_last_letter(const char *home_str)
+bool last_letter::start_last_letter(void)
 {
     pid_t child_pid = fork();
     if (child_pid == 0) {
@@ -61,20 +62,36 @@ void last_letter::start_last_letter(const char *home_str)
             close(i);
         }
 
-        char *saveptr=NULL;
-        char *s = strdup(home_str);
-        std::string lat_s(strtok_r(s, ",", &saveptr));
-        std::string lon_s(strtok_r(NULL, ",", &saveptr));
-        std::string alt_s(strtok_r(NULL, ",", &saveptr));
+        // char *saveptr=NULL;
+        // char *s = strdup(home_str);
+        // std::string lat_s(strtok_r(s, ",", &saveptr));
+        // std::string lon_s(strtok_r(NULL, ",", &saveptr));
+        // std::string alt_s(strtok_r(NULL, ",", &saveptr));
 
         //Append .0 to the end of the lat/lon/alt strings if they don't
         //already have a decimal place so that they're properly formatted
         //to be read by roslaunch.
-        lat_s += ( lat_s.find('.') != std::string::npos ) ? "" : ".0";
-        lon_s += ( lon_s.find('.') != std::string::npos ) ? "" : ".0";
-        alt_s += ( alt_s.find('.') != std::string::npos ) ? "" : ".0";
+        // lat_s += ( lat_s.find('.') != std::string::npos ) ? "" : ".0";
+        // lon_s += ( lon_s.find('.') != std::string::npos ) ? "" : ".0";
+        // alt_s += ( alt_s.find('.') != std::string::npos ) ? "" : ".0";
+
+        // std::string loc = "home:=[" + lat_s + "," + lon_s + "," + alt_s + "]";
+        printf("home:=[%d, %d, %d]", home.lat, home.lng, home.alt);
+
+        std::string lat_s(std::to_string(home.lat));
+        std::string lon_s(std::to_string(home.lng));
+        std::string alt_s(std::to_string(home.alt));
+
+        lat_s.insert((lat_s.length() - 7 ), ".");
+        lon_s.insert((lon_s.length() - 7 ), ".");
+        alt_s.insert((alt_s.length() - 2 ), ".");
 
         std::string loc = "home:=[" + lat_s + "," + lon_s + "," + alt_s + "]";
+
+        std::string instance_str = "instance:=" + std::to_string(instance);
+
+        printf("LAUNCHING WITH INSTANCE: %s\n", instance_str.c_str());
+        printf("LAUNCHING WITH HOME LOCATION: %s\n", loc.c_str());
 
         int ret = execlp("roslaunch",
                          "roslaunch",
@@ -82,12 +99,14 @@ void last_letter::start_last_letter(const char *home_str)
                          "launcher.launch",
                          "ArduPlane:=true",
                          loc.c_str(),
+                         instance_str.c_str(),
                          NULL);
         if (ret != 0) {
             perror("roslaunch");
         }
         exit(1);
     }
+    return true;
 }
 
 /*
@@ -141,6 +160,17 @@ void last_letter::recv_fdm(const struct sitl_input &input)
  */
 void last_letter::update(const struct sitl_input &input)
 {
+
+    while(!initialized){
+
+      if(!start_last_letter()){
+        time_now_us = 1;
+        return;
+      }
+
+      initialized = true;
+    }
+
     send_servos(input);
     recv_fdm(input);
     sync_frame_time();
