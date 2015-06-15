@@ -45,6 +45,8 @@ bool last_letter::start_last_letter(void)
 {
     pid_t child_pid = fork();
 
+    fdm_port = 9002 + 10*instance;
+
     // try to bind to a specific port so that if we restart ArduPilot
     // last_letter keeps sending us packets. Not strictly necessary but
     // useful for debugging
