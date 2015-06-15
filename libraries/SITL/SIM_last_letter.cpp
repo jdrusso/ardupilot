@@ -36,18 +36,6 @@ last_letter::last_letter(const char *home_str, const char *frame_str) :
     sock(true),
     initialised(false)
 {
-    // try to bind to a specific port so that if we restart ArduPilot
-    // last_letter keeps sending us packets. Not strictly necessary but
-    // useful for debugging
-    sock.bind("127.0.0.1", fdm_port+1);
-
-      // try to bind to a specific port so that if we restart ArduPilot
-      // last_letter keeps sending us packets. Not strictly necessary but
-      // useful for debugging
-      sock.bind("127.0.0.1", fdm_port+1);
-
-      sock.reuseaddress();
-      sock.set_blocking(false);
 }
 
 /*
@@ -56,6 +44,15 @@ last_letter::last_letter(const char *home_str, const char *frame_str) :
 bool last_letter::start_last_letter(void)
 {
     pid_t child_pid = fork();
+
+    // try to bind to a specific port so that if we restart ArduPilot
+    // last_letter keeps sending us packets. Not strictly necessary but
+    // useful for debugging
+    sock.bind("127.0.0.1", fdm_port+1);
+
+    sock.reuseaddress();
+    sock.set_blocking(false);
+
     if (child_pid == 0) {
         close(0);
         open("/dev/null", O_RDONLY);
