@@ -41,6 +41,7 @@ public:
 
 private:
     static const uint16_t fdm_port = 9002;
+    bool initialised;
 
     /*
       packet sent to last_letter
@@ -48,7 +49,7 @@ private:
     struct servo_packet {
         uint16_t servos[16];
     };
-    
+
     /*
       reply packet sent from last_letter to ArduPilot
      */
@@ -66,7 +67,7 @@ private:
 
     void recv_fdm(const struct sitl_input &input);
     void send_servos(const struct sitl_input &input);
-    void start_last_letter(void);
+    bool start_last_letter(void);
 
     uint64_t last_timestamp_us;
     SocketAPM sock;

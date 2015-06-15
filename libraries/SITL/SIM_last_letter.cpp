@@ -33,23 +33,27 @@ extern const AP_HAL::HAL& hal;
 last_letter::last_letter(const char *home_str, const char *frame_str) :
     Aircraft(home_str, frame_str),
     last_timestamp_us(0),
-    sock(true)
+    sock(true),
+    initialised(false)
 {
     // try to bind to a specific port so that if we restart ArduPilot
     // last_letter keeps sending us packets. Not strictly necessary but
     // useful for debugging
     sock.bind("127.0.0.1", fdm_port+1);
 
-    sock.reuseaddress();
-    sock.set_blocking(false);
+      // try to bind to a specific port so that if we restart ArduPilot
+      // last_letter keeps sending us packets. Not strictly necessary but
+      // useful for debugging
+      sock.bind("127.0.0.1", fdm_port+1);
 
-    start_last_letter();
+      sock.reuseaddress();
+      sock.set_blocking(false);
 }
 
 /*
   start last_letter child
  */
-void last_letter::start_last_letter(void)
+bool last_letter::start_last_letter(void)
 {
     pid_t child_pid = fork();
     if (child_pid == 0) {
@@ -60,17 +64,31 @@ void last_letter::start_last_letter(void)
             close(i);
         }
 
-        int ret = execlp("roslaunch", 
-                         "roslaunch", 
+        char argHome[50];
+        sprintf(argHome,"home:=[%f,%f,%f]",home.lat*1.0e-7,home.lng*1.0e-7,(double)home.alt*1.0e-2);
+
+        char argInstance[20];
+        sprintf(argInstance,"instance:=%d",instance);
+
+        printf("\n\nHOME LOCATION: %s \nINSTANCE ARG: %s\n\n", argHome, argInstance);
+
+        int ret = execlp("roslaunch",
+                         "roslaunch",
                          "last_letter",
                          "launcher.launch",
                          "ArduPlane:=true",
+                         "simRate:=500",
+                         "deltaT:=0.002",
+                         argHome,
+                         argInstance,
                          NULL);
         if (ret != 0) {
             perror("roslaunch");
         }
         exit(1);
     }
+
+    return true;
 }
 
 /*
@@ -124,6 +142,16 @@ void last_letter::recv_fdm(const struct sitl_input &input)
  */
 void last_letter::update(const struct sitl_input &input)
 {
+    while (!initialised){
+
+      if (!start_last_letter()){
+
+        time_now_us = 1;
+        return;
+      }
+
+      initialised = true;
+    }
     send_servos(input);
     recv_fdm(input);
     sync_frame_time();
